@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -39,8 +40,39 @@ const userSchema = new mongoose.Schema({
       }
     },
   },
+  tokens: [
+    {
+      token: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
 });
 
+//to send response without password and token array
+userSchema.methods.toJSON = function () {
+  const user = this;
+  const userObject = user.toObject();
+
+  delete userObject.password;
+  delete userObject.tokens;
+  return userObject;
+};
+
+userSchema.methods.generateToken = async function () {
+  const user = this;
+  const token = await jwt.sign(
+    { _id: user._id.toString() },
+    'thisismynewcourse'
+  );
+  console.log(token);
+  user.tokens = user.tokens.concat({ token });
+  console.log(user.tokens);
+  await user.save();
+
+  return token;
+};
 //calling method on model so static is used
 userSchema.statics.findByCredentials = async (email, password) => {
   const user = await User.findOne({ email });
